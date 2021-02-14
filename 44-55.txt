@@ -1,0 +1,236 @@
+-- 44. What product that makes us the most money (qty*price) (1)
+
+SELECT products.PRODUCTNAME
+FROM orderdetails
+NATURAL JOIN products
+GROUP BY products.PRODUCTNAME
+ORDER BY SUM(orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH) DESC
+FETCH FIRST ROW ONLY;
+
+
+
+
+
+
+
+
+
+
+-- 45. List the product lines and vendors for product lines which are supported by < 5 vendors
+-- (3)
+-- WHERE CLAUSE WORKS HERE BECAUSE there is only one value for product line 
+-- returned in the subquery
+SELECT products.productline, products.productvendor 
+FROM products 
+WHERE products.productline = 
+    (SELECT prod.productline
+     FROM products AS prod
+     GROUP BY prod.productline
+     HAVING COUNT(prod.productvendor) < 5);
+
+
+-- 46. List the products in the product line with the most number of products (38)
+
+SELECT prod.PRODUCTNAME
+FROM products AS prod
+WHERE prod.PRODUCTLINE = 
+    (SELECT products.PRODUCTLINE
+     FROM products
+     GROUP BY products.PRODUCTLINE
+     ORDER BY COUNT(products.PRODUCTCODE) DESC
+     FETCH FIRST ROW ONLY);
+
+
+-- 47. Find the first name and last name of all customer contacts whose customer is located in
+-- the same state as the San Francisco office. (11)
+
+SELECT customers.CONTACTFIRSTNAME, customers.CONTACTLASTNAME
+FROM customers
+WHERE customers."STATE" IN
+    (SELECT offices."STATE"
+     FROM offices
+     WHERE offices.CITY = 'San Francisco');
+
+
+
+
+
+
+
+
+-- Feedback:
+-- Actually, you found the highest priced order detail.  You need to do a sum across all details within the given order.
+-- 48. What is the customer and sales person of the highest priced order? (1)
+
+-- This query found the highest priced order detail.
+SELECT customers.CUSTOMERNAME, employees.FIRSTNAME  || ' ' || employees.LASTNAME AS "Sales Person"
+FROM customers
+INNER JOIN employees
+ON customers.SALESREPEMPLOYEENUMBER = employees.EMPLOYEENUMBER
+NATURAL JOIN orders
+NATURAL JOIN orderdetails
+WHERE orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH = 
+    (SELECT MAX(od.QUANTITYORDERED * od.PRICEEACH) 
+     FROM orderdetails AS od);
+
+-- This query found the highest priced order
+CREATE VIEW order_total_v AS 
+SELECT ordernumber, SUM(orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH) AS "Order Total"
+FROM orderdetails
+GROUP BY ordernumber
+ORDER BY "Order Total" DESC
+FETCH FIRST ROW ONLY;
+
+SELECT customers.CUSTOMERNAME, employees.FIRSTNAME  || ' ' || employees.LASTNAME AS "Sales Person"
+FROM customers
+INNER JOIN employees
+ON customers.SALESREPEMPLOYEENUMBER = employees.EMPLOYEENUMBER
+NATURAL JOIN orders
+INNER JOIN order_total_v USING(ordernumber)
+WHERE orders.ORDERNUMBER = order_total_v.ORDERNUMBER;
+
+
+
+
+
+
+
+
+
+
+Feedback:
+Same issues as above
+-- 49. What is the order number and the cost of the order for the most expensive orders? Note
+-- that there could be more than one order which all happen to add up to the same cost,
+-- and that same cost could be the highest cost among all orders. (1)
+
+SELECT orderdetails.ORDERNUMBER, orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH AS "Most Expensive Order"
+FROM orderdetails
+WHERE orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH = 
+
+    (SELECT MAX(od.QUANTITYORDERED * od.PRICEEACH) 
+     FROM orderdetails AS od);
+
+
+Feedback: Same issue as above
+-- 50. What is the name of the customer, the order number, and the total cost of the 
+--most expensive orders? (1)
+
+SELECT customers.CUSTOMERNAME, orderdetails.ORDERNUMBER, 
+       orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH AS "Most Expensive Order"
+FROM customers
+NATURAL JOIN orders
+NATURAL JOIN orderdetails
+WHERE orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH = 
+
+    (SELECT MAX(od.QUANTITYORDERED * od.PRICEEACH) 
+     FROM orderdetails AS od);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 51. Perform the above query using a view. (1)
+
+-- Create View 
+CREATE VIEW MOSTEXPENSIVEORDER AS
+SELECT MAX(orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH) AS "Most Expensive Order"
+FROM orderdetails;
+
+SELECT customers.CUSTOMERNAME, orderdetails.ORDERNUMBER, 
+        mostexpensiveorder."Most Expensive Order"
+FROM customers
+NATURAL JOIN orders
+NATURAL JOIN orderdetails
+INNER JOIN mostexpensiveorder
+ON mostexpensiveorder."Most Expensive Order" = orderdetails.QUANTITYORDERED * orderdetails.PRICEEACH; 
+
+
+-- 52. Show all of the customers who have ordered at least one product with the name “Ford” in it, that “Dragon Souveniers, Ltd.” has also ordered. List them in reverse alphabetical order, and do not consider the case of the letters in the customer name in the ordering.Show each customer no more than once. (61)
+
+SELECT customers.CUSTOMERNAME
+FROM customers
+NATURAL JOIN orders
+NATURAL JOIN orderdetails
+NATURAL JOIN products AS prod
+WHERE prod.PRODUCTNAME IN
+
+    (SELECT products.PRODUCTNAME
+    FROM customers
+    NATURAL JOIN orders
+    NATURAL JOIN orderdetails
+    NATURAL JOIN products
+    WHERE customers.CUSTOMERNAME = 'Dragon Souveniers, Ltd.' AND products.PRODUCTNAME LIKE '%Ford%')
+
+GROUP BY customers.CUSTOMERNAME
+HAVING COUNT(prod.PRODUCTNAME) >= 1
+ORDER BY customers.CUSTOMERNAME DESC;
+
+
+-- 53. Which products have an MSRP within 5% of the average MSRP across all products?
+-- List the Product Name, the MSRP, and the average MSRP ordered by the product
+-- MSRP. (14)
+
+SELECT products.PRODUCTNAME
+FROM products
+WHERE (ABS(
+        (SELECT AVG(MSRP) AS "AVG MSRP" FROM products) - products.MSRP) / products.MSRP) * 100 <= 5;
+
+-- 54. List all of the customers who have never made a payment on the same date as another
+-- customer. (57)
+
+SELECT one.CUSTOMERNAME
+FROM customers one
+WHERE NOT EXISTS 
+
+    (SELECT 'X' 
+     FROM payments 
+     WHERE payments.CUSTOMERNUMBER <> one.CUSTOMERNUMBER AND payments.PAYMENTDATE IN 
+            
+        (SELECT payments.PAYMENTDATE
+         FROM payments
+         WHERE payments.CUSTOMERNUMBER = one.CUSTOMERNUMBER))
+ORDER BY one.CUSTOMERNAME;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 55. Find customers who have ordered the same thing. Find only those customer pairs who
+-- have ordered the same thing as each other at least 201 times (1)
+DISCUSSED THIS IN CLASS
+SELECT one.CUSTOMERNAME, other.CUSTOMERNAME AS custname
+FROM    
+    (SELECT customers.CUSTOMERNAME, orderdetails.PRODUCTCODE
+     FROM customers
+     NATURAL JOIN orders
+     NATURAL JOIN orderdetails) AS one
+
+INNER JOIN
+    (SELECT customers.CUSTOMERNAME, orderdetails.PRODUCTCODE
+     FROM customers
+     NATURAL JOIN orders
+     NATURAL JOIN orderdetails) AS other
+ON one.CUSTOMERNAME < other.CUSTOMERNAME AND one.PRODUCTCODE = other.PRODUCTCODE 
+
+GROUP BY one.CUSTOMERNAME, other.CUSTOMERNAME
+HAVING COUNT(one.PRODUCTCODE) >= 201;

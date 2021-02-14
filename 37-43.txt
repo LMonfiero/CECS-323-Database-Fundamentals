@@ -1,0 +1,143 @@
+-- 37. List all customers who didn't order in 2015 (78)
+
+SELECT customers.CUSTOMERNAME 
+FROM customers
+
+EXCEPT 
+    
+SELECT customers.CUSTOMERNAME
+FROM customers
+NATURAL JOIN orders
+WHERE YEAR(orders.ORDERDATE) = 2015;
+
+-- 38. List all people that we deal with (employees and customer contacts). Display first name,last name, company name (or employee) (145)
+
+SELECT employees.FIRSTNAME AS "First Name", employees.LASTNAME AS "Last Name", 
+       'Employee' AS "Company Name"
+FROM employees
+
+UNION 
+    
+SELECT customers.contactfirstname, customers.contactlastname, 
+           customers.customername
+FROM customers;
+
+   
+-- 39. List the last name, first name, and employee number of all of the employees who do not have any customers. Order by last name first, then the first name. (8).
+
+SELECT employees.LASTNAME, employees.FIRSTNAME, employees.EMPLOYEENUMBER
+FROM employees
+
+EXCEPT 
+
+SELECT employees.LASTNAME, employees.FIRSTNAME, employees.EMPLOYEENUMBER
+FROM employees
+INNER JOIN customers
+ON employees.EMPLOYEENUMBER = customers.SALESREPEMPLOYEENUMBER
+ORDER BY employees.LASTNAME, employees.FIRSTNAME;
+
+
+-- 40. List the states and the country that the state is part of that have customers but not
+-- offices, offices but not customers, or both one or more customers and one or more
+-- offices all in one query. Designate which state is which with the string 'Customer',
+-- 'Office', or 'Both'. If a state falls into the “Both” category, do not list it as a Customer or
+-- an Office state. Order by the country, then the state. Give the category column (where
+-- you list ‘Customer’, ‘Office’, or ‘Both’) a header of “Category” and exclude any entries -- in which the state is null. (19)
+
+-- State has customers but not offices
+SELECT state, country, 'Customer' AS CATEGORY
+FROM customers 
+WHERE state IS NOT NULL 
+
+EXCEPT
+
+SELECT state, country, 'Customer' AS CATEGORY
+FROM customers
+INNER JOIN offices USING (state, country)
+
+UNION
+-- State has offices but not customers
+SELECT state, country, 'Office' AS CATEGORY
+FROM offices
+WHERE state IS NOT NULL 
+
+EXCEPT
+    
+SELECT state, country, 'Office' AS CATEGORY
+FROM offices
+INNER JOIN customers USING (state, country)
+
+-- State has both customers and offices
+UNION
+
+SELECT state, country, 'Both' AS CATEGORY
+FROM customers
+INNER JOIN offices USING (state, country)
+ORDER BY country, state;
+
+
+
+
+
+-- 41. List the Product Code and Product name of every product that has never been in --- an order in which the customer asked for more than 48 of them. Order by the Product
+-- Name. (8)
+
+
+SELECT products.PRODUCTCODE, products.PRODUCTNAME
+FROM products 
+
+EXCEPT 
+    
+SELECT PRODUCTCODE, PRODUCTNAME
+FROM products
+INNER JOIN orderdetails
+USING (productcode)
+WHERE QUANTITYORDERED > 48
+ORDER BY PRODUCTNAME;
+
+
+-- 42. List the first name and last name of any customer who ordered any products from – either of the two product lines ‘Trains’ or ‘Trucks and Buses’. Do not use an “or”. ----   
+-- instead perform a union. Order by the customer’s name. (61)
+
+SELECT customers.CONTACTFIRSTNAME, customers.CONTACTLASTNAME
+FROM customers
+NATURAL JOIN orders
+NATURAL JOIN orderdetails
+NATURAL JOIN products
+WHERE products.PRODUCTLINE = 'Trains'
+
+UNION 
+
+SELECT customers.CONTACTFIRSTNAME, customers.CONTACTLASTNAME
+FROM customers
+NATURAL JOIN orders
+NATURAL JOIN orderdetails
+NATURAL JOIN products
+WHERE products.PRODUCTLINE = 'Trucks and Buses';
+
+
+
+
+
+
+
+-- 43. List the name of all customers who do not live in the same state and country with any
+-- other customer. Do not use a count for this exercise. Order by the customer name. (83)
+
+SELECT one.customerName
+FROM 
+
+    (SELECT customerNumber, customerName,
+      COALESCE (state, 'N/A') state, country
+       FROM customers) AS one
+
+WHERE NOT EXISTS 
+
+    (SELECT 'X'
+    FROM (SELECT customerNumber, customerName,
+    COALESCE(state, 'N/A') state, country
+    FROM customers) other
+    WHERE one.customerNumber <> other.customerNumber AND
+    one.state = other.state AND one.country = other.country)
+
+ORDER BY customerName;

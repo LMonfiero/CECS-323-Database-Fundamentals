@@ -1,0 +1,59 @@
+create table writinggroups(
+groupname varchar(20) not null,
+headwriter varchar(20) not null,
+yearformed varchar(4) not null,
+subject varchar(20) not null
+);
+
+create table publishers(
+publishername varchar(20) not null,
+publisheraddress varchar(50) not null,
+publisherphone varchar (12) not null,
+publisheremail varchar(30) not null
+);
+
+create table books(
+groupname varchar(20) not null,
+booktitle varchar(40) not null,
+publishername varchar(20) not null,
+yearpublished varchar(4) not null,
+numberpages varchar(100) not null
+);
+
+alter table writinggroups
+add constraint pk_grpname primary key (groupname);
+
+alter table publishers
+add constraint pk_pubname primary key (publishername);
+
+alter table books
+add constraint pk_books primary key (groupname, booktitle);
+
+alter table books
+add constraint fk_books foreign key (groupname) references writinggroups(groupname);
+
+alter table books
+add constraint fk_pubname foreign key (publishername) references publishers(publishername);
+
+alter table books 
+add constraint ck_books unique (booktitle,publishername);
+
+INSERT INTO writinggroups (groupname, headwriter, yearformed, subject)
+    VALUES('Space Club', 'Stephen Hawkin', '1994', 'Science'),
+('Fantasy Land', 'J. R. R. Tolkien', '1950', 'Fantasy'),
+('Fiction Junction', 'Stephen Kin', '1989', 'Fiction'),
+('Time Travelers', 'Mark Twain', '1900', 'History');
+
+INSERT INTO publishers(publishername, publisheraddress, publisherphone, publisheremail)
+    VALUES('Penguin Random House', '1745 Broadway, New York, NY 10019', '2124235827', 'inquiry@penguinrandomhouse.com'),
+('Simon & Schuster', '1230 Avenue of the Americas, New York, NY 10017', '8454703254', 'contact@simonschuster.com'),
+('HarperCollins', '195 Broadway, New York, NY 10021', '2178614801', 'Contact@harpercollins.com'),
+('Hachette Livre', '43 quai de Grenelle, 75015 Paris, France', '33509758351', 'support@penguinrandomhouse.com');
+
+INSERT INTO books(booktitle, yearpublished,numberpages,groupname,publishername)
+    VALUES('1984', '1961', '328', 'Fiction Junction', 'Penguin Random House'),
+('A Brief History of Time', '1998', '212', 'Space Club', 'Simon & Schuster'),
+('A Heartbreaking Work ', '2001', '437', 'Time Travelers', 'HarperCollins'),
+('Guns, Germs, and Steel', '2005', '480', 'Time Travelers', 'Hachette Livre');
+
+select * from books;
