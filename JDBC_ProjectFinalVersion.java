@@ -1,7 +1,6 @@
 package jdbcproject;
 import java.sql.*;
 import java.util.Scanner;
-//Donovan and Frank
 public class JDBCProject {
 
     //  Database credentials
